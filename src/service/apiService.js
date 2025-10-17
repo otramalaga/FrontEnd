@@ -1,6 +1,7 @@
 import axios from "axios";
 
 import { API_BASE_URL } from '../config/apiConfig';
+import { PREDEFINED_CATEGORIES, PREDEFINED_TAGS } from '../constants/predefinedData';
 const API_BASE = API_BASE_URL;
 
 
@@ -153,39 +154,12 @@ export function deleteBookmark(id) {
 }
 
 export function getCategories() {
-  const cachedData = getCacheItem(CACHE_KEYS.CATEGORIES);
-  if (cachedData) {
-    return Promise.resolve(cachedData);
-  }
-
-  return axios
-    .get(categoriesUrl, getRequestOptions())
-    .then((response) => {
-      const data = response.data;
-      setCacheItem(CACHE_KEYS.CATEGORIES, data);
-      return data;
-    })
-    .catch((error) => {
-      throw error;
-    });
+  return Promise.resolve(PREDEFINED_CATEGORIES);
 }
 
 export function getTags() {
-  const cachedData = getCacheItem(CACHE_KEYS.TAGS);
-  if (cachedData) {
-    return Promise.resolve(cachedData);
-  }
-
-  return axios
-    .get(tagsUrl, getRequestOptions())
-    .then((response) => {
-      const data = response.data;
-      setCacheItem(CACHE_KEYS.TAGS, data);
-      return data;
-    })
-    .catch((error) => {
-      throw error;
-    });
+  // Devolver tags predefinidas directamente sin llamar al backend
+  return Promise.resolve(PREDEFINED_TAGS);
 }
 
 export function getUserById(id) {
