@@ -9,6 +9,7 @@ import LocationMarker from './LocationMarker';
 import SearchControl from './SearchControl';
 import MapFilters from '../MapFilters';
 import MarkerForm from './Markerform';
+import AddMarkerButton from './AddMarkerButton';
 import { createCustomIcon } from './CustomMarkerIcon';
 import { useMapFilters } from '../../hooks/useMapFilters';
 import { DEFAULT_MAP_CENTER, DEFAULT_ZOOM } from '../../constants/mapConstants';
@@ -165,6 +166,21 @@ export default function MapInteractive({
     }
   };
 
+  const handleAddMarkerClick = () => {
+    if (!user) {
+      showLoginPrompt();
+      return;
+    }
+    
+    if (mapInstance) {
+      const center = mapInstance.getCenter();
+      const position = [center.lat, center.lng];
+      setTemporaryMarker(position);
+      setFormPosition(position);
+      setIsPositionConfirmed(true);
+    }
+  };
+
   const filteredMarkers = filterMarkers(markers);
 
   const showLoginPrompt = () => {
@@ -236,6 +252,7 @@ export default function MapInteractive({
                 onCategoryChange={handleCategoryChange}
                 onTagChange={handleTagChange}
               />
+              <AddMarkerButton onClick={handleAddMarkerClick} />
             </>
           )}
           <MapContainer
