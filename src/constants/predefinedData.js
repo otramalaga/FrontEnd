@@ -4,7 +4,6 @@ export const PREDEFINED_CATEGORIES = [
   { id: 3, name: 'Iniciativas' }
 ];
 
-// Tags predefindas
 export const PREDEFINED_TAGS = [
   { id: 1, name: 'Medio Ambiente' },
   { id: 2, name: 'Feminismos' },
