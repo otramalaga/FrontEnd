@@ -20,9 +20,12 @@ export default function Footer() {
         </Link>
       </nav>
 
-      <aside className="flex items-center gap-2 w-full md:w-auto justify-center md:justify-start">
+      <aside className="flex flex-col items-center gap-1 w-full md:w-auto justify-center md:justify-start">
         <p className="font-bold">
           Otra Málaga © {currentYear}
+        </p>
+        <p className="text-sm font-semibold">
+          Hecho con ♥ por Iwalab
         </p>
       </aside>
 
