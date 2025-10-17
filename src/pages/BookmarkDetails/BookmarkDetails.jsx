@@ -10,6 +10,7 @@ import CategoryIcon from '../../components/MapInteractive/CategoryIcon';
 import { CATEGORY_COLORS, DEFAULT_CATEGORY_COLOR } from '../../constants/mapConstants';
 import BookmarkMap from '../../components/BookmarkMap/BookmarkMap';
 import { createCustomIcon } from '../../components/MapInteractive/CustomMarkerIcon';
+import ShareButton from '../../components/ShareButton/ShareButton';
 import 'leaflet/dist/leaflet.css';
 
 export default function BookmarkDetails() {
@@ -280,6 +281,10 @@ export default function BookmarkDetails() {
             </div>
 
             <div className="flex flex-col gap-4 w-11/12 mx-auto lg:w-64 flex-shrink-0 self-start order-1 lg:order-2">
+              {/* Botón de compartir - visible para todos */}
+              <ShareButton bookmark={bookmark} />
+              
+              {/* Botones de editar y eliminar - solo para el creador */}
               {user && bookmark.userId === user.id && (
                 <div className="flex flex-col gap-3">
                   <div className="">
