@@ -1,6 +1,7 @@
 import "../../index.css";
 import { Link } from "react-router-dom";
 import Buttons from "../Buttons/Buttons";
+import logoOtraMalaga from "../../assets/logoOtraMalaga.webp";
 
 function Header() {
   return (
@@ -10,7 +11,7 @@ function Header() {
           to="/"
           className="btn btn-ghost text-3xl text-white font-sans normal-case ml-4"
         >
-          Otra Málaga
+          <img src={logoOtraMalaga} alt="Logo Otra Málaga" className="w-auto h-25" />
         </Link>
       </div>
       <div className="flex-none flex items-center">

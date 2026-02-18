@@ -4,6 +4,7 @@ import "../../index.css";
 import { Link, useNavigate } from "react-router-dom";
 import { debounce } from "lodash";
 import { searchBookmarks } from "../../service/apiService";
+import logoOtraMalaga from "../../assets/logoOtraMalaga.webp";
 
 
 export default function HeaderLogged() {
@@ -144,7 +145,7 @@ export default function HeaderLogged() {
           to="/HomePage"
           className="btn btn-ghost text-3xl text-white font-sans normal-case ml-4"
         >
-          Otra Málaga
+          <img src={logoOtraMalaga} alt="Logo Otra Málaga" className="w-auto h-20" />
         </Link>
       </div>
 
