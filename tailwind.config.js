@@ -5,7 +5,17 @@ export default {
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
-    extend: {},
+    extend: {
+      keyframes: {
+        "bookmark-load-bar": {
+          "0%": { transform: "translateX(-120%)" },
+          "100%": { transform: "translateX(320%)" },
+        },
+      },
+      animation: {
+        "bookmark-load-bar": "bookmark-load-bar 1.35s ease-in-out infinite",
+      },
+    },
   },
   plugins: [require("daisyui")],
   daisyui: {

@@ -18,8 +18,6 @@ const CACHE_KEYS = {
   TIMESTAMP: '_timestamp'
 };
 
-const CACHE_EXPIRATION = 5;
-
 function getRequestOptions() {
   const user = JSON.parse(localStorage.getItem("user"));
   return {
@@ -29,25 +27,6 @@ function getRequestOptions() {
     },
   };
 }
-
-const getCacheItem = (key) => {
-  try {
-    const item = localStorage.getItem(key);
-    if (!item) return null;
-
-    const { data, timestamp } = JSON.parse(item);
-    const now = new Date().getTime();
-    
-    if (now - timestamp > CACHE_EXPIRATION * 60 * 1000) {
-      localStorage.removeItem(key);
-      return null;
-    }
-    
-    return data;
-  } catch (error) {
-    return null;
-  }
-};
 
 const setCacheItem = (key, data) => {
   try {
@@ -64,12 +43,22 @@ const clearCache = () => {
   Object.values(CACHE_KEYS).forEach(key => localStorage.removeItem(key));
 };
 
-export function getAllBookmarks() {
-  const cachedData = getCacheItem(CACHE_KEYS.BOOKMARKS);
-  if (cachedData) {
-    return Promise.resolve(cachedData);
+export function peekStaleBookmarks() {
+  try {
+    const item = localStorage.getItem(CACHE_KEYS.BOOKMARKS);
+    if (!item) return null;
+    const { data } = JSON.parse(item);
+    return Array.isArray(data) ? data : null;
+  } catch {
+    return null;
   }
-  
+}
+
+/**
+ * Siempre pide la lista al API y actualiza localStorage (para mostrar datos viejos al instante con peekStaleBookmarks mientras carga).
+ * Así los marcadores reflejan el servidor en cada carga; no hay ventana de horas sin refrescar.
+ */
+export function getAllBookmarks() {
   return axios
     .get(baseUrl)
     .then((response) => {
@@ -158,7 +147,6 @@ export function getCategories() {
 }
 
 export function getTags() {
-  // Devolver tags predefinidas directamente sin llamar al backend
   return Promise.resolve(PREDEFINED_TAGS);
 }
 

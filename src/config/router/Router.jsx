@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { getAllBookmarks } from "../../service/apiService";
 import HomePage from "../../pages/HomePage/HomePage";
 import LandingPage from "../../pages/LandingPage/LandingPage";
 import Login from "../../pages/Login/Login";
@@ -15,6 +17,10 @@ import PrivateLayout from "../../components/Layout/PrivateLayout";
 import MapView from "../../pages/MapView/MapView";
 
 export default function Router() {
+  useEffect(() => {
+    getAllBookmarks().catch(() => {});
+  }, []);
+
   return (
     <BrowserRouter>
       <AuthProvider>

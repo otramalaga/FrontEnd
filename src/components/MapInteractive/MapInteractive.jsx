@@ -14,8 +14,31 @@ import { createCustomIcon } from './CustomMarkerIcon';
 import { useMapFilters } from '../../hooks/useMapFilters';
 import { DEFAULT_MAP_CENTER, DEFAULT_ZOOM } from '../../constants/mapConstants';
 import { searchLocation } from '../../service/mapService';
-import { getAllBookmarks } from '../../service/apiService';
+import { getAllBookmarks, peekStaleBookmarks } from '../../service/apiService';
 import { useNavigate } from 'react-router-dom';
+
+const MAP_BOOKMARKS_POLL_MS = (() => {
+  const n = Number(import.meta.env.VITE_MAP_BOOKMARKS_POLL_MS);
+  return Number.isFinite(n) && n >= 15000 ? n : 45_000;
+})();
+
+function filterBookmarksWithCoords(bookmarksData) {
+  if (!Array.isArray(bookmarksData)) return [];
+  return bookmarksData.filter(
+    (bookmark) =>
+      bookmark.location &&
+      bookmark.location.latitude &&
+      bookmark.location.longitude
+  );
+}
+
+function formatSyncedTime(date) {
+  return date.toLocaleTimeString('es-ES', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+}
 
 function MapClickHandler({ onClick, isPreview, showLoginPrompt }) {
   const navigate = useNavigate();
@@ -49,12 +72,15 @@ export default function MapInteractive({
   const [formPosition, setFormPosition] = useState(null);
   const [mapInstance, setMapInstance] = useState(null);
   const [markers, setMarkers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [bookmarksLoading, setBookmarksLoading] = useState(true);
+  const [bookmarksRefreshing, setBookmarksRefreshing] = useState(false);
+  const [bookmarksError, setBookmarksError] = useState(null);
+  const [lastSyncedAt, setLastSyncedAt] = useState(null);
   const [temporaryMarker, setTemporaryMarker] = useState(null);
   const [isPositionConfirmed, setIsPositionConfirmed] = useState(false);
   const [showLoginAlert, setShowLoginAlert] = useState(false);
   const markerRefs = useRef({});
+  const mapFetchReadyRef = useRef(false);
 
   const {
     selectedCategories,
@@ -65,29 +91,76 @@ export default function MapInteractive({
   } = useMapFilters();
 
   useEffect(() => {
-    const fetchBookmarks = async () => {
+    let cancelled = false;
+
+    const run = async () => {
+      const stale = peekStaleBookmarks();
+      const validStale = stale ? filterBookmarksWithCoords(stale) : [];
+      const hasStale = validStale.length > 0;
+
+      if (hasStale) {
+        setMarkers(validStale);
+        setBookmarksLoading(false);
+        setBookmarksRefreshing(true);
+      } else {
+        setBookmarksLoading(true);
+        setBookmarksRefreshing(false);
+      }
+
       try {
-        setLoading(true);
-        setError(null);
+        setBookmarksError(null);
         const bookmarksData = await getAllBookmarks();
-        
-        // Filtrar marcadores válidos con coordenadas
-        const validBookmarks = bookmarksData.filter(bookmark => 
-          bookmark.location && 
-          bookmark.location.latitude && 
-          bookmark.location.longitude
-        );
-        
-        setMarkers(validBookmarks);
-      } catch (err) {
-        setError('Error al cargar los marcadores');
+        if (cancelled) return;
+        setMarkers(filterBookmarksWithCoords(bookmarksData));
+        setLastSyncedAt(new Date());
+      } catch {
+        if (!cancelled && !hasStale) {
+          setBookmarksError('Error al cargar los marcadores');
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setBookmarksLoading(false);
+          setBookmarksRefreshing(false);
+          mapFetchReadyRef.current = true;
+        }
       }
     };
 
-    fetchBookmarks();
+    run();
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
+  useEffect(() => {
+    if (isPreview) return undefined;
+
+    const syncFromServer = () => {
+      getAllBookmarks()
+        .then((data) => {
+          setMarkers(filterBookmarksWithCoords(data));
+          setLastSyncedAt(new Date());
+        })
+        .catch(() => {});
+    };
+
+    const intervalId = setInterval(() => {
+      if (document.visibilityState !== 'visible' || !mapFetchReadyRef.current) return;
+      syncFromServer();
+    }, MAP_BOOKMARKS_POLL_MS);
+
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible' && mapFetchReadyRef.current) {
+        syncFromServer();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [isPreview]);
 
   useEffect(() => {
     if (focusedBookmarkId && markers.length > 0 && mapInstance) {
@@ -140,12 +213,8 @@ export default function MapInteractive({
     setIsPositionConfirmed(false);
     try {
       const bookmarksData = await getAllBookmarks();
-      const validBookmarks = bookmarksData.filter(bookmark => 
-        bookmark.location && 
-        bookmark.location.latitude && 
-        bookmark.location.longitude
-      );
-      setMarkers(validBookmarks);
+      setMarkers(filterBookmarksWithCoords(bookmarksData));
+      setLastSyncedAt(new Date());
     } catch (err) {
     }
   };
@@ -188,18 +257,6 @@ export default function MapInteractive({
     setTimeout(() => setShowLoginAlert(false), 3000);
   };
 
-  if (loading) {
-    return <div className="flex justify-center items-center h-screen">
-      <span className="loading loading-spinner loading-lg"></span>
-    </div>;
-  }
-
-  if (error) {
-    return <div className="flex justify-center items-center h-screen text-error">
-      {error}
-    </div>;
-  }
-
   return (
     <div className="flex flex-col h-screen relative">
       {showHeader && (
@@ -209,6 +266,33 @@ export default function MapInteractive({
       )}
       
       <div className="flex-grow relative">
+        {bookmarksError && (
+          <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-[1000] alert alert-error shadow-lg max-w-md">
+            <span>{bookmarksError}</span>
+            <button
+              type="button"
+              className="btn btn-sm btn-ghost"
+              onClick={() => {
+                setBookmarksError(null);
+                setBookmarksLoading(true);
+                setBookmarksRefreshing(false);
+                getAllBookmarks()
+                  .then((bookmarksData) => {
+                    setMarkers(filterBookmarksWithCoords(bookmarksData));
+                    setLastSyncedAt(new Date());
+                  })
+                  .catch(() => setBookmarksError('Error al cargar los marcadores'))
+                  .finally(() => {
+                    setBookmarksLoading(false);
+                    setBookmarksRefreshing(false);
+                  });
+              }}
+            >
+              Reintentar
+            </button>
+          </div>
+        )}
+
         {showLoginAlert && (
           <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-[1000] alert alert-info shadow-lg w-auto">
             <div className="flex items-center gap-2">
@@ -315,6 +399,71 @@ export default function MapInteractive({
               </Marker>
             ))}
           </MapContainer>
+
+          {bookmarksLoading && (
+            <div
+              className="pointer-events-none absolute bottom-20 left-1/2 z-[450] w-[min(22rem,calc(100vw-1.5rem))] -translate-x-1/2 md:bottom-24"
+              role="status"
+              aria-live="polite"
+              aria-busy="true"
+            >
+              <div className="overflow-hidden rounded-2xl border border-base-content/10 bg-base-100/92 shadow-[0_12px_40px_-12px_rgba(0,0,0,0.35)] backdrop-blur-md dark:border-base-content/15 dark:bg-base-100/88 dark:shadow-black/40">
+                <div className="h-0.5 w-full overflow-hidden bg-primary/20">
+                  <div className="h-full w-2/5 animate-bookmark-load-bar rounded-full bg-primary" />
+                </div>
+                <div className="flex gap-3 px-4 py-3.5">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/12 ring-1 ring-primary/25">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                      className="h-5 w-5 animate-pulse text-primary"
+                      aria-hidden
+                    >
+                      <path fillRule="evenodd" d="M11.54 22.351l.07.04.028.016a.76.76 0 00.723 0l.028-.015.071-.041a16.975 16.975 0 001.144-.742 19.58 19.58 0 002.683-2.282c1.944-1.99 3.963-4.98 3.963-8.827a8.25 8.25 0 00-16.5 0c0 3.846 2.02 6.837 3.963 8.827a19.58 19.58 0 002.682 2.282 16.975 16.975 0 001.145.742zM12 13.5a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="min-w-0 flex-1 pt-0.5">
+                    <p className="text-sm font-semibold tracking-tight text-base-content">
+                      Cargando marcadores
+                    </p>
+                    <p className="mt-1 text-xs leading-snug text-base-content/65">
+                      Puedes mover el mapa. Si tarda, el servidor puede estar arrancando; las visitas siguientes suelen ir más rápido.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {(bookmarksRefreshing || lastSyncedAt) && !bookmarksLoading && (
+            <div className="pointer-events-none absolute bottom-6 right-14 z-[450] flex max-w-[min(11rem,calc(100vw-2rem))] flex-col items-stretch gap-2 md:bottom-8 md:right-16">
+              {bookmarksRefreshing && (
+                <div role="status" aria-live="polite">
+                  <div className="flex items-center justify-center gap-2 rounded-lg border border-base-content/10 bg-base-100/90 px-3 py-2 text-center text-xs font-medium text-base-content/80 shadow-lg backdrop-blur-md">
+                    <span className="loading loading-spinner loading-xs shrink-0 text-primary" />
+                    <span>Sincronizando datos…</span>
+                  </div>
+                </div>
+              )}
+              {lastSyncedAt && (
+                <div
+                  className="rounded-lg border border-base-content/10 bg-base-100/85 px-2.5 py-1.5 text-center shadow-md backdrop-blur-sm"
+                  title="Hora de la última respuesta correcta del servidor. El mapa se vuelve a consultar en segundo plano mientras la pestaña está visible."
+                >
+                  <p className="text-[10px] font-medium uppercase tracking-wide text-base-content/45">
+                    Datos actualizados
+                  </p>
+                  <p className="text-xs font-semibold tabular-nums text-base-content/80">
+                    {formatSyncedTime(lastSyncedAt)}
+                  </p>
+                  <p className="mt-0.5 text-[10px] text-base-content/50">
+                    Auto cada {Math.round(MAP_BOOKMARKS_POLL_MS / 1000)}s
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
         
         {isPositionConfirmed && formPosition && (
