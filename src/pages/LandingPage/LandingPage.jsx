@@ -1,10 +1,14 @@
+import { lazy, Suspense } from "react";
 import Header from "../../components/Header/Header";
 import Footer from "../../components/Footer/Footer";
 import { useNavigate } from "react-router-dom";
-import heroWelcome from "../../assets/heroWelcome.jpg";
-import Verdiales from "../../assets/Verdiales.jpg";
+import welcomeHero from "../../assets/Welcome.webp";
+import Explanation from "../../assets/Explanation.webp";
 import ButtonMap from "../../components/Buttons/ButtonMap";
-import MapInteractive from "../../components/MapInteractive/MapInteractive";
+
+const MapInteractive = lazy(() =>
+  import("../../components/MapInteractive/MapInteractive")
+);
 
 export default function LandingPage() {
   const navigate = useNavigate();
@@ -17,8 +21,7 @@ export default function LandingPage() {
       <div
         className="hero min-h-screen"
         style={{
-          backgroundImage:
-              `url(${heroWelcome})`,
+          backgroundImage: `url(${welcomeHero})`,
         }}
       >
         <div className="hero-overlay"></div>
@@ -34,9 +37,12 @@ export default function LandingPage() {
       <div className="hero bg-base-200 py-16">
         <div className="hero-content flex-col lg:flex-row items-center">
           <img
-            src={Verdiales}
+            src={Explanation}
             className="max-w-sm rounded-lg shadow-2xl"
             alt="Imagen temporal"
+            loading="lazy"
+            decoding="async"
+            fetchPriority="low"
           />
           <div className="lg:ml-8 flex flex-col items-start">
             <h1 className="text-5xl font-bold text-secondary">
@@ -58,7 +64,23 @@ export default function LandingPage() {
           Cada marcador en el mapa representa una iniciativa ciudadana. Haz clic para ver más información, filtra por categoría o barrio, y contribuye sumando nuevos marcadores. ¡Construyamos juntas una ciudad más justa, inclusiva y descentralizada!
         </p>
         <div className="w-full h-[500px] rounded-lg overflow-hidden shadow-lg">
-          <MapInteractive showHeader={false} showFilters={false} height="100%" isPreview={true} />
+          <Suspense
+            fallback={
+              <div className="flex h-full items-center justify-center bg-base-200">
+                <span
+                  className="loading loading-spinner loading-lg text-primary"
+                  aria-label="Cargando mapa"
+                />
+              </div>
+            }
+          >
+            <MapInteractive
+              showHeader={false}
+              showFilters={false}
+              height="100%"
+              isPreview={true}
+            />
+          </Suspense>
         </div>
       </div>
      

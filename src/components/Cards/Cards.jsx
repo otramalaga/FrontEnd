@@ -9,7 +9,13 @@ export default function Cards({ title, category, tag, address, img, id }) {
   return (
     <div className="card bg-base-100 w-full shadow-sm">
       <figure className="relative h-48">
-        <img src={img} alt={title} className="w-full h-full object-cover" />
+        <img
+          src={img}
+          alt={title}
+          className="w-full h-full object-cover"
+          loading="lazy"
+          decoding="async"
+        />
         <div className="absolute top-2 left-2">
           <CategoryIcon 
             category={category} 

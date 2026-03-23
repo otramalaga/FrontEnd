@@ -1,13 +1,16 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { getAllBookmarks, getCategories, getTags } from "../../service/apiService";
 import Cards from "../../components/Cards/Cards";
 import Buttons from "../../components/Buttons/Buttons";
 import FilterCategoryTag from "../../components/FilterCategoryTag";
-import imageTemporal from "../../assets/imageTemporal.png";
+import imageTemporal from "../../assets/imageTemporal.webp";
 import { getImageUrl } from '../../utils/imageUtils';
-import Verdiales from "../../assets/Verdiales.jpg";
-import heroWelcome from "../../assets/heroWelcome.jpg";
-import MapInteractive from "../../components/MapInteractive/MapInteractive";
+import welcomeHero from "../../assets/Welcome.webp";
+import Explanation from "../../assets/Explanation.webp";
+
+const MapInteractive = lazy(() =>
+  import("../../components/MapInteractive/MapInteractive")
+);
 
 export default function HomePage() {
   const [bookmarks, setBookmarks] = useState([]);
@@ -74,7 +77,7 @@ export default function HomePage() {
     <>
       <div
         className="hero min-h-screen"
-        style={{ backgroundImage: `url(${heroWelcome})` }}    
+        style={{ backgroundImage: `url(${welcomeHero})` }}    
       >
         <div className="hero-overlay"></div>
         <div className="hero-content text-neutral-content justify-start w-full">
@@ -90,9 +93,12 @@ export default function HomePage() {
       <div className="hero bg-base-200 py-16">
         <div className="hero-content flex-col lg:flex-row items-center">
           <img
-            src={Verdiales}
+            src={Explanation}
             className="max-w-sm rounded-lg shadow-2xl"
             alt="Imagen temporal"
+            loading="lazy"
+            decoding="async"
+            fetchPriority="low"
           />
           <div className="lg:ml-8 flex flex-col items-start">
             <h1 className="text-5xl font-bold text-secondary">
@@ -113,7 +119,23 @@ export default function HomePage() {
           Cada marcador en el mapa representa una iniciativa ciudadana. Haz clic para ver más información, filtra por categoría o barrio, y contribuye sumando nuevos marcadores. ¡Construyamos juntas una ciudad más justa, inclusiva y descentralizada!
         </p>
         <div className="w-full h-[500px] mt-8 rounded-lg overflow-hidden shadow-lg">
-          <MapInteractive showHeader={false} showFilters={false} height="100%" isPreview={true} />
+          <Suspense
+            fallback={
+              <div className="flex h-full items-center justify-center bg-base-200">
+                <span
+                  className="loading loading-spinner loading-lg text-primary"
+                  aria-label="Cargando mapa"
+                />
+              </div>
+            }
+          >
+            <MapInteractive
+              showHeader={false}
+              showFilters={false}
+              height="100%"
+              isPreview={true}
+            />
+          </Suspense>
         </div>
       </div>
 

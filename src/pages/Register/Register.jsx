@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { register as registerUser } from "../../service/authService";
 import Header from "../../components/Header/Header";
 import Footer from "../../components/Footer/Footer";
-import RegisterPage from "../../assets/RegisterPage.jpg";
+import registerHero from "../../assets/Register.webp";
 
 export default function Register() {
   const {
@@ -44,7 +44,7 @@ export default function Register() {
       <div
         className="min-h-screen flex items-center justify-center bg-cover bg-center [filter:sepia(40%)]"
         style={{
-          backgroundImage: `url(${RegisterPage})`,
+          backgroundImage: `url(${registerHero})`,
         }}
       >
         <div className="card w-96 bg-base-100 shadow-xl p-4">

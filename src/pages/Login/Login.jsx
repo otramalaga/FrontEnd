@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import Header from "../../components/Header/Header";
 import Footer from "../../components/Footer/Footer";
-import LoginPage from "../../assets/LoginPage.jpg";
+import loginHero from "../../assets/Login.webp";
 
 export default function Login() {
   const {
@@ -41,7 +41,7 @@ export default function Login() {
       <div
         className="min-h-screen flex items-center justify-center bg-cover bg-center [filter:sepia(40%)]"
         style={{
-          backgroundImage: `url(${LoginPage})`,
+          backgroundImage: `url(${loginHero})`,
           }}
       >
         <div className="card w-96 bg-base-100 shadow-xl p-4">
